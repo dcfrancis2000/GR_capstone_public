@@ -82,7 +82,7 @@ for player_id in list(bb_id['id']):
                     print(f'data not found')
 fulldata = pd.DataFrame(gamedata)
 
-fulldata.to_csv(r'C:\Users\dcfra\GR_capstone\data\kinexon_scraped_5-2.csv',index = False)
+fulldata.to_csv(r'C:\Users\dcfra\GR_capstone\data\kinexon_scraped.csv',index = False)
 
 print('\nDataset scraped with zero errors. Good job')
 print(f"""

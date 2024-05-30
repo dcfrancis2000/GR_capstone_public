@@ -100,7 +100,7 @@ def main():
             vald_full = pd.concat([vald_full, data]) # bind each player's test/trial data by row
 
     vald_full = vald_full.iloc[:,[9,10,0,1,2,3,4,5,6,7,8]] # player ID first column
-    vald_full.to_csv(r"C:\Users\dcfra\GR_capstone\data\vald_scraped.csv")
+    vald_full.to_csv(r"C:\Users\dcfra\GR_capstone_public\data\\vald_scraped.csv")
 
     # diagnostics
     print('\nDataset scraped with zero errors. Good job')

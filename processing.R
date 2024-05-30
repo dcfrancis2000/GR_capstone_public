@@ -67,23 +67,29 @@ reps <- vald_wide %>% group_by(TEST_ID) %>%
     summarise(REP = 1:n()) %>% ungroup() %>% dplyr::select(REP) %>% as.matrix()
 
 vald_final <-
-    cbind(reps,vald_wide)[vald_wide2$DATE %in% dates & as.numeric(vald_wide2$REP) <= 2, # first 2 reps only
+    cbind(reps,vald_wide)[vald_wide$DATE %in% dates & reps <= 2, # first 2 reps only
                           c(2,3,1,6:(ncol(vald_wide)))] %>% # order columns
-    dplyr::select(-(problematic_metrics)) %>%
+    dplyr::select(-all_of(problematic_metrics)) %>%
     mutate_at(c("ATHLETE", "REP", "DATE"), as.factor) %>%
     mutate_if(is.numeric, replacebadcells) # mean imputation 
 
 ################################################################################
 
-# Merging Datasets
+# Preparing ML Dataset
 
+# Merging Datasets
 full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude()
 
-# Weeding out unreliable vald metrics
+# identifying reliable metrics for each player
 source('./reliability_testing.R')
-instance <- get_reliability_instance(vald_final)
+instance <- get_reliability_instance(vald_final) 
+instance_summary <- apply(rbind(instance + 0,
+                          apply(instance,2,mean),
+                          apply(instance,2,sum)),2,as.character)
+rownames(instance_summary) <- c(rownames(instance),'Mean','Sum')
+writeLines(instance_summary,'./plots_summaries/metric_reliability_matrix.txt')
 
-# reliable metrics for at least 4/5 players
+# reliable metrics for at least 2/5 players
 reliable_index <- apply(instance,1,sum) >= 2
 
 ML_data <- full_data[,c(rep(T,10),F,reliable_index)] %>%

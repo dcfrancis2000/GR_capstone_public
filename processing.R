@@ -83,7 +83,7 @@ full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude()
 source('./reliability_testing.R')
 instance <- get_reliability_instance(vald_final)
 
-# reliable metrics for at least 4/5 players
+# reliable metrics for at least 2/5 players
 reliable_index <- apply(instance,1,sum) >= 2
 
 ML_data <- full_data[,c(rep(T,10),F,reliable_index)] %>%

@@ -83,11 +83,11 @@ full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude()
 # identifying reliable metrics for each player
 source('./reliability_testing.R')
 instance <- get_reliability_instance(vald_final) 
-instance_summary <- apply(rbind(instance + 0,
+instance_summary <- rbind(instance + 0,
                           apply(instance,2,mean),
-                          apply(instance,2,sum)),2,as.character)
+                          apply(instance,2,sum))
 rownames(instance_summary) <- c(rownames(instance),'Mean','Sum')
-writeLines(instance_summary,'./plots_summaries/metric_reliability_matrix.txt')
+write.csv(instance_summary,'./plots_summaries/metric_reliability_matrix.csv')
 
 # reliable metrics for at least 2/5 players
 reliable_index <- apply(instance,1,sum) >= 2

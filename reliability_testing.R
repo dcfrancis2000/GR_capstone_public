@@ -1,4 +1,11 @@
-swag <- subset(vald_final,ATHLETE == 'Akuel Kot')
+################################################################################
+
+# Reliability testing script
+
+################################################################################
+
+# Computes intraclass correlation (3.1) for each metric both within and between 
+# days based on the DescTools::ICC function
 
 icc_funct_desctools <- function(data) {
     metric_names <- colnames(data)[-(1:2)]
@@ -28,8 +35,12 @@ icc_funct_desctools <- function(data) {
     output
 }
 
+################################################################################
+
+# Coefficient of variation: within and between days based on
+# within/between day mean squares
+
 cv_funct_sumsq <- function(data) {
-    # coefficient of variation based on within/between day mean squares
     metric_names <- colnames(data)[-(1:2)]
     n <- length(metric_names)
     within_output <- rep(NA,n)
@@ -39,8 +50,8 @@ cv_funct_sumsq <- function(data) {
         temp <- data[,c(1,2,i+2)]
         X <- model.matrix(~ -1 + DATE,data=temp)[,] # design matrix is constant
         Y <- as.matrix(temp[,3])
-        yhat <- X %*% MASS::ginv(t(X) %*% X) %*% t(X) %*% Y # pred
-        ybar <- rep(mean(Y),nrow(X))
+        yhat <- X %*% MASS::ginv(t(X) %*% X) %*% t(X) %*% Y # day means
+        ybar <- rep(mean(Y),nrow(X)) # mean of day means
         
         # between day mean square
         msb <- t(yhat - ybar) %*% (yhat - ybar) / (qr(X)$rank - 1)
@@ -58,21 +69,24 @@ cv_funct_sumsq <- function(data) {
     output
 }
 
+################################################################################
+
+# uses ICC and CV to return instance matrix for each metric for each player
+# cutoffs may be tuned to get an appropriate number of reliable metrics?
+
 get_reliability_instance <- function(data) {
-    # reliability for each metric for each player
     instance <- matrix(NA,nrow=ncol(data) - 3,ncol=5)
     for(i in 1:5) {
-        newdata <- subset(data,ATHLETE == unique(data$ATHLETE)[i]) %>%
-            dplyr::select(-ATHLETE)
+        newdata <- subset(data,ATHLETE == unique(data$ATHLETE)[i])[,-1]
         cv <- cv_funct_sumsq(newdata)
         icc <- icc_funct_desctools(newdata)
         
         # within-day ICC greater than 70%
-        icc_condition <- icc[,1] < 70
+        icc_condition <- icc[,1] > 70
         # between and within-day CV smaller than 10%
         cv_condition <- apply(cv < 10,1,function(x) x[1] & x[2])
         weeding_condition <- icc_condition & cv_condition
-        instance[,i] <- as.numeric(weeding_condition)
+        instance[,i] <- weeding_condition
     }
     colnames(instance) <- unique(data$ATHLETE)
     rownames(instance) <- colnames(data)[-c((1:3))]

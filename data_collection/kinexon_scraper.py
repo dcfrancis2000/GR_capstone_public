@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import json
 import sys
 import regex as re
-sys.path.insert(1,'C:/Users/dcfra/sports/train_trax') # link to TT repo
+sys.path.insert(1,'C:/Users/Daiven/sports/train_trax/scripts') # link to TT repo
 from api_kinexon import KinexonAPI
 
 kin = KinexonAPI()
@@ -82,7 +82,7 @@ for player_id in list(bb_id['id']):
                     print(f'data not found')
 fulldata = pd.DataFrame(gamedata)
 
-fulldata.to_csv(r'C:\Users\dcfra\GR_capstone_public\data\kinexon_scraped.csv',index = False)
+fulldata.to_csv(r'C:\Users\Daiven\GR_capstone_public\data\kinexon_scraped.csv',index = False)
 
 print('\nDataset scraped with zero errors. Good job')
 print(f"""

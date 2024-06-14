@@ -5,7 +5,7 @@
 ################################################################################
 
 # Setup
-setwd("C:/Users/dcfra/GR_capstone_public")
+setwd("C:/Users/Daiven/GR_capstone_public")
 library(tidyverse)
 library(snakecase)
 
@@ -79,6 +79,7 @@ vald_final <-
 
 # Merging Datasets
 full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude()
+write.csv(full_data,'./data/fulldata.csv')
 
 # identifying reliable metrics for each player
 source('./reliability_testing.R')
@@ -90,7 +91,7 @@ rownames(instance_summary) <- c(rownames(instance),'Mean','Sum')
 write.csv(instance_summary,'./plots_summaries/metric_reliability_matrix.csv')
 
 # reliable metrics for at least 2/5 players
-reliable_index <- apply(instance,1,sum) >= 2
+reliable_index <- instance[,1] #apply(instance,1,sum) >= 2
 
 ML_data <- full_data[,c(rep(T,10),F,reliable_index)] %>%
     group_by(ATHLETE,DATE) %>% 

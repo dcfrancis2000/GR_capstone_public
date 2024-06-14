@@ -77,7 +77,7 @@ cv_funct_sumsq <- function(data) {
 get_reliability_instance <- function(data) {
     instance <- matrix(NA,nrow=ncol(data) - 3,ncol=5)
     for(i in 1:5) {
-        newdata <- subset(data,ATHLETE == unique(data$ATHLETE)[i])[,-1]
+        newdata <- subset(data,ATHLETE == sort(unique(data$ATHLETE))[i])[,-1]
         cv <- cv_funct_sumsq(newdata)
         icc <- icc_funct_desctools(newdata)
         

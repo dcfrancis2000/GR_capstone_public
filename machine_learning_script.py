@@ -1,3 +1,12 @@
+###########################################################################################
+
+# Machine Learning Script. For each player, run a set of regression and ridge models
+# and store the results. Feature selection is automated currently, subject to change later.
+# Features are initially chosen based on the instance reliability matrix created in 
+# the R processing script. 
+
+###########################################################################################
+
 import sys
 import time
 import numpy as np
@@ -9,9 +18,11 @@ from sklearn.model_selection import cross_validate, LeaveOneOut
 from sklearn.feature_selection import SelectFromModel
 from sklearn.metrics import root_mean_squared_error, make_scorer
 
+# This script takes a while to run (about 8 minutes, about 90 seconds per player)
 time_total_start = time.time()
-
 pd.set_option('expand_frame_repr', False)
+
+# Leave-one-out cross-validated root mean square error is main performance metric
 loo = LeaveOneOut()
 data_raw = pd.read_csv('C:/Users/dcfra/GR_capstone_public/data/full_data.csv')
 instance = pd.read_csv("C:/Users/dcfra/GR_capstone_public/plots_summaries/instance.csv")
@@ -19,20 +30,24 @@ scale = lambda x: StandardScaler().fit_transform(x)
 names = list(data_raw['ATHLETE'].unique())
 y_vars = ['AAL','SPEEDMAX','JUMPS','PHYSIOLOAD','EXERTIONS','DISTANCE']
 
+# function to process CV output. gives average RMSE value out of all folds
 def response_cv(cv,var):
         if type(var) == str:
             return -np.mean(cv[f'test_{var}'])
         else:
             return [-np.mean(cv[f'test_{var_i}']) for var_i in var]
-        
+
+# helper function for cross_validate       
 def rmse_score(y_true, y_pred,output_index):
     return root_mean_squared_error(y_true[:, output_index], y_pred[:, output_index])
 
+# main performance scoring metric. Applied to all six responses
 scorers = {
     f'{y_vars[i]}': make_scorer(rmse_score, output_index=i, greater_is_better=False)
     for i in range(len(y_vars))
 }
 
+# Learning process identical across players
 for name in enumerate(names):
     time_athlete_start = time.time()
 
@@ -40,6 +55,8 @@ for name in enumerate(names):
     print('Processing Data...')
 
     row_cutter = pd.Index(data_raw["ATHLETE"] == name[1])
+    # first 10 columns are player/game info and responses. Selects "reliable" metrics for
+    # respective player using instance matrix from R script
     column_cutter = pd.Index([True for _ in range(10)] + list(instance.iloc[:,name[0]] == 1))
     data = data_raw.iloc[row_cutter,column_cutter]
     n = data.shape[0]
@@ -49,15 +66,16 @@ for name in enumerate(names):
     features = data.drop(pd.Index(y_vars + ['ATHLETE','DATE','HALF']), axis=1) 
     x_vars = list(indicators.columns) + list(features.columns)
 
-    X_full = np.c_[np.array(indicators), scale(features)]
-    X_one = np.ones((n,1))
-    X_red = np.c_[np.array(indicators), scale(np.array(data.TIME).reshape(-1,1))]
+    X_full = np.c_[np.array(indicators), scale(features)] # all available features
+    X_one = np.ones((n,1)) # intercept only
+    X_red = np.c_[np.array(indicators), scale(np.array(data.TIME).reshape(-1,1))] # kinexon features only (time and half indicator)
 
     print('Running regression models...')
-
+    # intercept-only regression model is the main baseline
     cv_one = cross_validate(MultiOutputRegressor(LinearRegression()), 
                             X_one,Y,cv = loo,scoring = scorers, 
                             return_train_score = False, verbose = 0, n_jobs = -1)
+    # if this is better than the full model, then Vald metrics are useless?
     cv_redreg = cross_validate(MultiOutputRegressor(LinearRegression()), 
                             X_red,Y, cv=loo, scoring=scorers,
                             return_train_score=False, verbose = 0, n_jobs = -1)
@@ -65,16 +83,16 @@ for name in enumerate(names):
                                 X_full, Y, cv=loo, scoring=scorers, return_train_score=False, verbose = 0, n_jobs = -1)
 
     print('Getting selected ridge features...')
-
+    # automated hyperparameter tuning for Ridge based on LOOCV RMSE
     model = RidgeCV(alphas = np.logspace(-4,4,50),
                     scoring = 'neg_root_mean_squared_error',
                     cv = loo)
-
-    rfe_model = SelectFromModel(model,prefit=False)
+    rfe_model = SelectFromModel(model,prefit=False) # need to look more into this. More black box than I'd like
     selector = rfe_model.fit(X_full, Y)
     X_cut = selector.transform(X_full)
     x_cutnames = list(selector.get_feature_names_out(input_features=x_vars))
 
+    # Most of the processing time lives here    
     print('Cross-validating ridge models...')
     cv_red = cross_validate(model, X_red,Y, cv=loo, scoring=scorers, 
                             return_train_score=False,verbose = 0,n_jobs = -1)

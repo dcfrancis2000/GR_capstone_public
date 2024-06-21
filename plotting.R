@@ -13,13 +13,13 @@ cleannames <- function(x) sapply(x,function(y) switch(y,
 setwd("C:/Users/dcfra/GR_capstone_public")
 library(ggplot2)
 library(tidyverse)
-data <- read.csv('./data/fulldata.csv')[,-1]
+data <- read.csv('./data/full_data.csv')
 data_kinexon <- data[,1:10]
 #data_kinexon$ATHLETE <- as.numeric(as.factor(data_kinexon$ATHLETE))
 kin_long <- data_kinexon %>% pivot_longer(cols = 5:10,
                                           names_to = 'METRIC',
                                           values_to = 'VALUE')
-kin_long$METRIC <- cleannames(kin_long$METRIC)
+# kin_long$METRIC <- cleannames(kin_long$METRIC)
 
 ################################################################################
 
@@ -116,6 +116,10 @@ for(m in metric_names) {
     print(plt)
 }
 graphics.off()
+
+library(R.utils)
+compressPDF(filename = './plots_summaries/kinexon_by_vald.pdf',
+            outFilename = './plots_summaries/kinexon_by_vald_compressed.pdf')
 ################################################################################
 library(patchwork)
 athlete_names <- unique(full_data$ATHLETE)
@@ -146,3 +150,5 @@ for(m in metric_names) {
     print(plt + plot_annotation(title = paste0(m,' By Kinexon Metrics Across Players')))    
 }
 graphics.off()
+
+################################################################################

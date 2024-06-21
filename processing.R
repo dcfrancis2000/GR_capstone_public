@@ -71,30 +71,25 @@ vald_final <-
                           c(2,3,1,6:(ncol(vald_wide)))] %>% # order columns
     dplyr::select(-all_of(problematic_metrics)) %>%
     mutate_at(c("ATHLETE", "REP", "DATE"), as.factor) %>%
-    mutate_if(is.numeric, replacebadcells) # mean imputation 
+    mutate_if(is.numeric, replacebadcells) # mean imputation
 
 ################################################################################
 
 # Preparing ML Dataset
 
 # Merging Datasets
-full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude()
-write.csv(full_data,'./data/fulldata.csv')
+full_data <- merge(kin_final,vald_final,all.x = TRUE) |> na.exclude() %>%
+    dplyr::select(-REP) %>% distinct()
+write.csv(full_data,'./data/full_data.csv',row.names = F)
 
 # identifying reliable metrics for each player
 source('./reliability_testing.R')
 instance <- get_reliability_instance(vald_final) 
-instance_summary <- rbind(instance + 0,
-                          apply(instance,2,mean),
-                          apply(instance,2,sum))
-rownames(instance_summary) <- c(rownames(instance),'Mean','Sum')
-write.csv(instance_summary,'./plots_summaries/metric_reliability_matrix.csv')
+# instance matrix to be used in Python script
+write.csv(instance + 0,'./plots_summaries/instance.csv',row.names = F)
 
-# reliable metrics for at least 2/5 players
-reliable_index <- instance[,1] #apply(instance,1,sum) >= 2
-
-ML_data <- full_data[,c(rep(T,10),F,reliable_index)] %>%
-    group_by(ATHLETE,DATE) %>% 
-    mutate_at(-(1:10),mean) %>% distinct() # average jump metrics over reps
-
-write.csv(ML_data,'./data/ML_data.csv')
+# instance_summary <- rbind(instance + 0,
+#                           apply(instance,2,mean),
+#                           apply(instance,2,sum))
+# rownames(instance_summary) <- c(rownames(instance),'Mean','Sum')
+# write.csv(instance_summary,'./plots_summaries/metric_reliability_matrix.csv')

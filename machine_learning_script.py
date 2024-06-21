@@ -24,7 +24,7 @@ pd.set_option('expand_frame_repr', False)
 
 # Leave-one-out cross-validated root mean square error is main performance metric
 loo = LeaveOneOut()
-data_raw = pd.read_csv('C:/Users/dcfra/GR_capstone_public/data/full_data.csv')
+data_raw = pd.read_csv('C:/Users/dcfra/GR_capstone_public/data/full_data.csv').mean().reset_index() # average over jumps (no duplicates)
 instance = pd.read_csv("C:/Users/dcfra/GR_capstone_public/plots_summaries/instance.csv")
 scale = lambda x: StandardScaler().fit_transform(x)
 names = list(data_raw['ATHLETE'].unique())
@@ -133,7 +133,7 @@ for name in enumerate(names):
         f'Selected Features: \n{x_cutnames}',
         f'RMSE Values (Average LOOCV values): \n{rmse_frame.T}',
         f'Coefficients * SD: \n{(coefs * Y_sds).T}',
-        "###############################################################################################"
+        "###############################################################################################\n\n"
     ])
 
     with open('C:/Users/dcfra/GR_capstone_public/plots_summaries/machine_learning_output.txt','a') as writefile:

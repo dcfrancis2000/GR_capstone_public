@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.linear_model import LinearRegression, MultiTaskElasticNetCV
-from sklearn.model_selection import cross_validate, LeaveOneOut
+from sklearn.linear_model import LinearRegression, MultiTaskElasticNet
+from sklearn.model_selection import cross_validate, LeaveOneOut, GridSearchCV
 from sklearn.metrics import mean_squared_error, make_scorer
 
 time_total_start = time.time()
@@ -27,10 +27,19 @@ def response_cv(cv):
 def rmse_score(y_true, y_pred, output_index):
     return np.sqrt(mean_squared_error(y_true[:, output_index], y_pred[:, output_index]))
 
+
 scorers = {
     f'{y_vars[i]}': make_scorer(rmse_score, output_index=i, greater_is_better=False)
     for i in range(len(y_vars))
 }
+
+def aggregate_rmse(y_true, y_pred):
+    # Calculate RMSE for each output and then aggregate
+    rmse_per_task = [np.sqrt(mean_squared_error(y_true[:, i], y_pred[:, i])) for i in range(y_true.shape[1])]
+    return np.sqrt(np.mean(np.square(rmse_per_task)))  # Aggregate RMSE
+
+aggregate_rmse_scorer = make_scorer(aggregate_rmse, greater_is_better=False)
+
 
 # Initialize lists to collect data for all players
 results_rmse = []
@@ -54,16 +63,33 @@ for idx, name in enumerate(names):
     x_vars = list(X.columns)
         
     model_reg = MultiOutputRegressor(LinearRegression())
-    ratios = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
-    model_elastic = MultiTaskElasticNetCV(
-         alphas = np.logspace(-4,4,50),
-         cv = loo,
-         max_iter = 100000,
-         tol = 1e-3,
-         l1_ratio = ratios,
-         n_jobs = -1, 
-         selection = 'random',
-         random_state = 0)
+    # ratios = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
+
+    param_grid = {
+            'alpha': np.logspace(-4, 4, 50),
+            'l1_ratio': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
+        }
+
+    # model_elastic = MultiTaskElasticNetCV(
+    #      alphas = np.logspace(-4,4,50),
+    #      cv = loo,
+    #      max_iter = 100000,
+    #      tol = 1e-3,
+    #      l1_ratio = ratios,
+    #      n_jobs = -1, 
+    #      selection = 'random',
+    #      random_state = 0)
+    
+    model_elastic = MultiTaskElasticNet(max_iter=100000, tol=1e-3, selection='random', random_state=0)
+
+    grid_search = GridSearchCV(
+        model_elastic, param_grid, cv=loo, scoring=aggregate_rmse_scorer, n_jobs=-1, verbose=0
+    )
+    
+    # Fit the models
+    grid_search.fit(X, Y)
+    
+    fit_model = grid_search.best_estimator_
     
     cv_reg = cross_validate(model_reg, X_one, Y,
                             cv=loo, scoring=scorers, 
@@ -73,7 +99,7 @@ for idx, name in enumerate(names):
                                 cv=loo, scoring=scorers, 
                                 return_train_score=False, verbose=0, n_jobs=-1) 
     
-    fit_model = model_elastic.fit(X,Y)
+    # fit_model = model_elastic.fit(X,Y)
     coefs = pd.DataFrame(fit_model.coef_)
     coefs.index = y_vars
     coefs.columns = x_vars
